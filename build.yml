@@ -6,34 +6,38 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+    - name: Checkout OpenWrt source
+      uses: actions/checkout@v4
+      with:
+        repository: openwrt/openwrt
+        ref: openwrt-24.10.1
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
-            gettext git java-propose-classpath libelf-dev libncurses5-dev \
-            libncursesw5-dev libssl-dev python2.7-dev python3 unzip wget \
-            zlib1g-dev
+    - name: Update & install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
+          gettext git java-propose-classpath libelf-dev libncurses5-dev \
+          libncursesw5-dev libssl-dev python2.7-dev python3 unzip wget \
+          zlib1g-dev
 
-      - name: Clone feeds
-        run: |
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+    - name: Clone and install feeds
+      run: |
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
 
-      - name: Load custom .config
-        run: |
-          cp $GITHUB_WORKSPACE/.config .config
+    - name: Load custom config
+      run: |
+        cp ${{ github.workspace }}/.config .config
+        make defconfig
 
-      - name: Build
-        run: |
-          make defconfig
-          make -j$(nproc)
+    - name: Compile firmware
+      run: |
+        make -j$(nproc) || make -j1 V=s
 
-      - name: Upload firmware
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenWrt-K2P
-          path: bin/targets/
+    - name: Upload firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenWrt-K2P-A2
+        path: bin/targets/ramips/mt7621/
